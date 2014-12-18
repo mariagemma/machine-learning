@@ -1,0 +1,124 @@
+MachineLearningProject
+----------------------
+
+###Sypnosis
+
+For this project we use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who quantify how well they do an exercise. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. Other variables will be use to predict with. 
+
+###Data Processing
+
+First we install libraries and download data files from URL.  
+
+```{r}
+#install.packages("caret")
+#install.packages("randomForest")
+library(caret)
+library(randomForest)
+
+setwd("C:/DataScientistGit/machine learning")
+
+if(!file.exists("data")){
+  dir.create("data")
+}
+
+fileurl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+#download.file(fileurl, destfile = "./data/pml-training.csv")
+fileurl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+#download.file(fileurl, destfile = "./data/pml-testing.csv")
+
+```
+
+We upload data and prepare them to keep just columns with no missing data. We also remove time columns because this information is no relevant for this study.  
+
+```{r}
+training <- read.table("./data/pml-training.csv", sep=",", header=TRUE)
+testing <- read.table("./data/pml-testing.csv", sep=",", header=TRUE)
+
+training <- training[, c("user_name", "new_window",  "num_window", "roll_belt", "pitch_belt", 
+"yaw_belt", "total_accel_belt", "gyros_belt_x", "gyros_belt_y", "gyros_belt_z",
+"accel_belt_x", "accel_belt_y", "accel_belt_z", "magnet_belt_x", "magnet_belt_y", "magnet_belt_z",
+"roll_arm", "pitch_arm", "yaw_arm", "total_accel_arm", "gyros_arm_x", "gyros_arm_y", "gyros_arm_z",
+"accel_arm_x", "accel_arm_y", "accel_arm_z", "magnet_arm_x", "magnet_arm_y", "magnet_arm_z",            
+"roll_dumbbell", "pitch_dumbbell", "yaw_dumbbell", "roll_forearm", "pitch_forearm",
+"yaw_forearm", "classe")] 
+
+dim(training)
+
+```
+
+We can see we have a larger sample and therefore we could use crossValidation and create a partition of data like this:  
+60% for training data  
+40% for validation data  
+
+We will improve accuracy and avoid overfitting in our model  
+```{r}
+set.seed(33833);
+
+trainingIndex = createDataPartition(training$classe, p = 0.60,list=FALSE)
+trainingSet = training[trainingIndex, ]
+validationSet = training[-trainingIndex,]
+dim(trainingSet)
+dim(validationSet)
+```
+
+We use randomForest model with training data because it has high accuracy  
+We can see error of model is not significant.  
+```{r}
+modelFit <- randomForest(classe~.,data=trainingSet)
+print(modelFit)
+```
+
+Calculate and order variable importance to see which variables have more influence in data.  
+```{r}
+vimp<-varImp(modelFit, scale=FALSE)
+vimpOrder <- vimp[ order(vimp$Overall, decreasing=TRUE), ,drop=FALSE]
+print(vimpOrder)
+
+varImpPlot(modelFit, sort=TRUE)
+```
+
+Calculate confusion matrix comparing predictions of validation data with their real values.  
+We can see accuracy is very high about 0.9976. It's a good method to predict our data.  
+```{r}
+#Validate data
+confusionMatrix(predict(modelFit,newdata=validationSet),validationSet$classe)
+```
+
+###Predictions Results
+We prepare testing data and predict them with model.  
+```{r}
+testing <- testing[, c("user_name", "new_window",  "num_window", "roll_belt", "pitch_belt", 
+"yaw_belt", "total_accel_belt", "gyros_belt_x", "gyros_belt_y", "gyros_belt_z",
+"accel_belt_x", "accel_belt_y", "accel_belt_z", "magnet_belt_x", "magnet_belt_y", "magnet_belt_z",
+"roll_arm", "pitch_arm", "yaw_arm", "total_accel_arm", "gyros_arm_x", "gyros_arm_y", "gyros_arm_z",
+"accel_arm_x", "accel_arm_y", "accel_arm_z", "magnet_arm_x", "magnet_arm_y", "magnet_arm_z",            
+"roll_dumbbell", "pitch_dumbbell", "yaw_dumbbell", "roll_forearm", "pitch_forearm",
+"yaw_forearm")] 
+classe<- factor(x="A",levels=c("A", "B", "C", "D", "E"))
+testing <- cbind(testing, classe)
+testing <- rbind(validationSet[1,],testing)
+
+# Predict data
+pred <- predict(modelFit,newdata=testing[-1,])
+print(pred)
+
+```
+
+###Annex I:
+**Program help you to submit predictions in assigment.**  
+Generating Answers Files to Submit Assignment  
+
+answers = c("B","A","B","A","A","E","D","B","A","A","B","C","B","A","E","E","A","B","B","B")  
+
+then you can load this function by copying and pasting it into R:  
+pml_write_files = function(x){  
+  n = length(x)  
+  for(i in 1:n){   
+    filename = paste0("problem_id_",i,".txt")  
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)  
+  }  
+}  
+then create a folder where you want the files to be written. Set that to be your working directory and run:  
+pml_write_files(answers)  
