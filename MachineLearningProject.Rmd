@@ -1,3 +1,6 @@
+---
+output: pdf_document
+---
 MachineLearningProject
 ----------------------
 
@@ -17,7 +20,7 @@ First we install libraries and download data files from URL.
 library(caret)
 library(randomForest)
 
-setwd("C:/DataScientistGit/machine learning")
+setwd("C:/DataScientistGit/machine-learning")
 
 if(!file.exists("data")){
   dir.create("data")
